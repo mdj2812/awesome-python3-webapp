@@ -2,6 +2,7 @@ import logging, functools, asyncio, inspect, os
 
 from urllib import parse
 from aiohttp import web
+from apis import APIError
 
 def get(path):
     '''
@@ -127,8 +128,8 @@ class RequestHandler(object):
         try:
             r = await self._func(**kw)
             return r
-        except BaseException as e:
-            raise e
+        except APIError as e:
+            return dict(error=e.error, data=e.data, message=e.message)
 
 def add_static(app):
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')

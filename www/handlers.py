@@ -99,7 +99,7 @@ async def api_register_users(*, email, name, passwd):
     return r
 
 @post('/api/authenticate')
-async def authentificate(email, passwd):
+async def authentificate(*, email, passwd):
     if not email:
         raise APIValueError('email', 'Invalid email.')
     if not passwd:
@@ -113,10 +113,11 @@ async def authentificate(email, passwd):
     sha1.update(user.id.encode('utf-8'))
     sha1.update(b':')
     sha1.update(passwd.encode('utf-8'))
-    if user.passwd != sha1.hexdigest:
+    if user.passwd != sha1.hexdigest():
         raise APIValueError('password', 'Invalid password.')
     r = web.Response()
     r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
     user.passwd = '******'
+    r.content_type = 'application/json'
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r

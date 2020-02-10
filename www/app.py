@@ -10,6 +10,7 @@ from config import configs
 import orm
 from models import User, Blog, Comment
 from coroweb import add_routes, add_static
+from handlers import COOKIE_NAME, cookie2user
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -37,6 +38,21 @@ async def logger_factory(app, handler):
         logging.info('Request: %s %s' % (request.method, request.path))
         return (await handler(request))
     return logger
+
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME)
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+            return web.HTTPFound('/signin')
+        return (await handler(request))
+    return auth
 
 async def response_factory(app, handler):
     async def response(request):
@@ -87,7 +103,7 @@ def datetime_filter(t):
 async def init(loop):
     await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+        logger_factory, response_factory, auth_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')

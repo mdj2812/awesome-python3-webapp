@@ -1,4 +1,4 @@
-import logging, functools, asyncio, inspect
+import logging, functools, asyncio, inspect, os
 
 from urllib import parse
 from aiohttp import web
@@ -129,6 +129,11 @@ class RequestHandler(object):
             return r
         except BaseException as e:
             raise e
+
+def add_static(app):
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    app.router.add_static('/static/', path)
+    logging.info('add static %s => %s' % ('/static/', path))
 
 def add_route(app, fn):
     method = getattr(fn, '__method__', None)

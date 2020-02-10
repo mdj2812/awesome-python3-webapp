@@ -6,9 +6,10 @@ from datetime import datetime
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
+from config import configs
 import orm
 from models import User, Blog, Comment
-from coroweb import add_routes
+from coroweb import add_routes, add_static
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -84,16 +85,17 @@ def datetime_filter(t):
     return u'%s/%s/%s' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www-data', password='www-data', db='awesome')
+    await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
-    # add_static(app)
-    await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
+    add_static(app)
+    srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
     logging.info('Server started at http://127.0.0.1:9000...')
     # web.run_app(app, host='127.0.0.1', port=9000)
+    return srv
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
